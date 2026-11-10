@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fff8f3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Алиналюбимка">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <title>Алиналюбимка — карма</title>
   <style>
     :root{--ink:#3b302d;--muted:#897a75;--pink:#d96e83;--cream:#fff8f3;--line:#f0dfd8;--green:#44866d;--red:#c35f67}
@@ -19,6 +24,7 @@
 <body>
 <main>
   <header class="hero"><div class="heart">♡</div><h1>Алиналюбимка</h1><p class="sub">Наша маленькая шкала поступков, заботы и второго шанса.</p><div id="syncStatus" class="sync">Подключаем общую шкалу…</div></header>
+  <details class="card" style="padding:16px 20px"><summary style="cursor:pointer;font-weight:650;color:#754852">Добавить Алиналюбимку на экран телефона</summary><p class="help">На iPhone: открой ссылку в Safari, нажми «Поделиться» → «На экран Домой». На Android: открой ссылку в Chrome, нажми ⋮ → «Установить приложение» или «Добавить на главный экран».</p><button id="installApp" class="add" type="button" hidden>Установить приложение</button></details>
   <section id="accessInfo" class="card access" hidden><h2>Нужна ссылка-приглашение</h2><p>Откройте Алиналюбимку по общей ссылке, чтобы видеть один счёт и историю с разных устройств.</p></section>
   <div id="app" hidden>
   <section class="card score" aria-live="polite"><div class="score-label">карма сейчас</div><div id="score" class="value">0</div><div id="mood" class="mood">Чистый лист — можно начать с доброго поступка</div><div class="bar"><div id="fill" class="fill"></div></div></section>
@@ -30,7 +36,7 @@
 <script>
 const initial=[['Сказал честно, даже если разговор был непростым',3],['Выполнил обещание или предупредил заранее',2],['Выслушал и не обесценивал чувства',3],['Признал ошибку и извинился без оправданий',3],['Уважил просьбу о личном пространстве',2],['Проявил заботу так, как ей приятно',2],['Соврал или скрыл важную вещь',-5],['Нарушил обещание без предупреждения',-3],['Давил, требовал немедленного ответа',-3],['Использовал молчание или ревность как наказание',-4],['Высмеял или обесценил чувства',-4],['Нарушил личную границу',-5]];
 const $=s=>document.querySelector(s),api='https://qnxtfumbsgufnprtemve.supabase.co',apiKey='sb_publishable_HVjUPT908lHu3vgWvA5jeA_UqqYs7Nv';
-const accessToken=new URLSearchParams(location.hash.slice(1)).get('access');let data,saveTimer,pollTimer,dirty=false,writing=false;
+const accessToken=new URLSearchParams(location.hash.slice(1)).get('access')||localStorage.getItem('alina-karma-access');if(accessToken)localStorage.setItem('alina-karma-access',accessToken);let data,saveTimer,pollTimer,dirty=false,writing=false;
 try{data=JSON.parse(localStorage.getItem('alina-karma-v1'))}catch{};if(!data||!Array.isArray(data.history))data={score:0,history:[],presets:initial.map(([name,points])=>({name,points}))};
 function status(message){$('#syncStatus').textContent=message}
 async function rpc(name,body){const r=await fetch(`${api}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:apiKey,Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error(await r.text());return r.json()}
@@ -43,6 +49,7 @@ $('#manual').addEventListener('submit',e=>{e.preventDefault();const points=Math.
 $('#editToggle').onclick=()=>$('#editbox').classList.toggle('open');$('#editbox').onsubmit=e=>{e.preventDefault();const name=$('#presetName').value.trim(),n=Math.min(99999,Math.abs(parseInt($('#presetValue').value,10)||1)),points=n*Number($('#presetSign').value);if(!name)return;const i=$('#editbox').dataset.edit;if(i!==undefined){data.presets[+i]={name,points};delete $('#editbox').dataset.edit}else data.presets.push({name,points});$('#presetName').value='';$('#editbox').classList.remove('open');save()};
 $('#reset').onclick=()=>{if(confirm('Удалить историю и обнулить карму?')){data.score=0;data.history=[];save()}};$('#share').onclick=async()=>{const link=`${location.origin}${location.pathname}#access=${encodeURIComponent(accessToken)}`;try{await navigator.clipboard.writeText(link);$('#toast').classList.add('show');setTimeout(()=>$('#toast').classList.remove('show'),1800)}catch{prompt('Скопируй общую ссылку:',link)}};
 if(!accessToken){$('#accessInfo').hidden=false;status('Общая шкала открывается по ссылке-приглашению')}else{status('Загружаем общую шкалу…');rpc('read_alina_karma',{p_token:accessToken}).then(remote=>{if(!remote||!Array.isArray(remote.history)||!Array.isArray(remote.presets))throw new Error('invalid');data=remote;$('#app').hidden=false;localStorage.setItem('alina-karma-v1',JSON.stringify(data));render();status('Общая шкала синхронизирована ✓');pollTimer=setInterval(async()=>{if(saveTimer||dirty||writing)return;try{const latest=await rpc('read_alina_karma',{p_token:accessToken});if(JSON.stringify(latest)!==JSON.stringify(data)){data=latest;localStorage.setItem('alina-karma-v1',JSON.stringify(data));render()}}catch{status('Нет связи с общей шкалой')}} ,3000)}).catch(()=>{status('Ссылка недействительна или нет соединения');$('#accessInfo').hidden=false;$('#accessInfo h2').textContent='Не удалось открыть шкалу';$('#accessInfo p').textContent='Проверьте ссылку и подключение к интернету.'})}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.alinaInstallPrompt=e;$('#installApp').hidden=false});$('#installApp').onclick=async()=>{if(!window.alinaInstallPrompt)return;await window.alinaInstallPrompt.prompt();window.alinaInstallPrompt=null;$('#installApp').hidden=true};
 </script>
 </body>
 </html>
