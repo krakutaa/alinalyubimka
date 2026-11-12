@@ -1,13 +1,13 @@
 {
   "name": "Алиналюбимка",
-  "short_name": "Алина 💗",
+  "short_name": "Алина ❤️",
   "description": "Наша маленькая шкала поступков, заботы и второго шанса.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fff8f3",
-  "theme_color": "#e98fa0",
+  "background_color": "#0c090a",
+  "theme_color": "#160b0d",
   "icons": [
     {
       "src": "icons/icon-192.png",
